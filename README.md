@@ -7,7 +7,7 @@ GitHub issues**, then run them **one at a time, safely**, on your machine. No
 cluster, no Linear, no private infra — just `gh`, `claude`, and your repo.
 
 ```bash
-npx skills add anupam-io/skills
+npx skills add anupam-io/sprint-skills
 ```
 
 Works in Claude Code, Cursor, Copilot, and 15+ other agents via the
@@ -63,7 +63,7 @@ in order. Three worked plans — open the `dag.html` in each, or read the `promi
 ## 90-second quickstart
 
 ```bash
-npx skills add anupam-io/skills          # 1. install
+npx skills add anupam-io/sprint-skills          # 1. install
 bash .claude/skills/sprint/run-sprint.sh doctor   # 2. preflight (gh authed? claude? node? jq?)
 
 # 3. in your agent: "plan a sprint to <your goal>"   → review the DAG → approve
@@ -103,7 +103,7 @@ bash .claude/skills/sprint/run-sprint.sh --afk -n 10   # autonomous: PR + safe-m
 ### Grab just one
 
 ```bash
-npx skills add anupam-io/skills --skill sprint-plan
+npx skills add anupam-io/sprint-skills --skill sprint-plan
 ```
 
 Add `-a claude-code` (or `cursor`, `copilot`, …) to target a specific agent.
