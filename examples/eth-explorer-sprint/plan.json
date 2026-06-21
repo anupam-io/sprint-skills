@@ -1,0 +1,194 @@
+[
+  {
+    "id": 1,
+    "title": "eth JSON-RPC client",
+    "type": "feature",
+    "deps": [],
+    "wave": 1,
+    "files": [
+      "backend/rpc/client.ts"
+    ]
+  },
+  {
+    "id": 2,
+    "title": "blocks table schema",
+    "type": "feature",
+    "deps": [],
+    "wave": 1,
+    "files": [
+      "db/schema/blocks.ts"
+    ]
+  },
+  {
+    "id": 3,
+    "title": "txs table schema",
+    "type": "feature",
+    "deps": [],
+    "wave": 1,
+    "files": [
+      "db/schema/txs.ts"
+    ]
+  },
+  {
+    "id": 4,
+    "title": "accounts table schema",
+    "type": "feature",
+    "deps": [],
+    "wave": 1,
+    "files": [
+      "db/schema/accounts.ts"
+    ]
+  },
+  {
+    "id": 5,
+    "title": "block indexer",
+    "type": "feature",
+    "deps": [
+      1,
+      2
+    ],
+    "wave": 2,
+    "files": [
+      "backend/indexer/blocks.ts"
+    ]
+  },
+  {
+    "id": 6,
+    "title": "transaction indexer",
+    "type": "feature",
+    "deps": [
+      1,
+      3
+    ],
+    "wave": 2,
+    "files": [
+      "backend/indexer/txs.ts"
+    ]
+  },
+  {
+    "id": 7,
+    "title": "account state indexer",
+    "type": "feature",
+    "deps": [
+      1,
+      4
+    ],
+    "wave": 2,
+    "files": [
+      "backend/indexer/accounts.ts"
+    ]
+  },
+  {
+    "id": 8,
+    "title": "blocks API",
+    "type": "feature",
+    "deps": [
+      5
+    ],
+    "wave": 3,
+    "files": [
+      "backend/api/blocks.ts"
+    ]
+  },
+  {
+    "id": 9,
+    "title": "transactions API",
+    "type": "feature",
+    "deps": [
+      6
+    ],
+    "wave": 3,
+    "files": [
+      "backend/api/txs.ts"
+    ]
+  },
+  {
+    "id": 10,
+    "title": "address API",
+    "type": "feature",
+    "deps": [
+      7
+    ],
+    "wave": 3,
+    "files": [
+      "backend/api/accounts.ts"
+    ]
+  },
+  {
+    "id": 11,
+    "title": "unified search API",
+    "type": "feature",
+    "deps": [
+      8,
+      9,
+      10
+    ],
+    "wave": 4,
+    "files": [
+      "backend/api/search.ts"
+    ]
+  },
+  {
+    "id": 12,
+    "title": "block list + detail UI",
+    "type": "feature",
+    "deps": [
+      8
+    ],
+    "wave": 4,
+    "files": [
+      "ui/Blocks.tsx"
+    ]
+  },
+  {
+    "id": 13,
+    "title": "transaction detail UI",
+    "type": "feature",
+    "deps": [
+      9
+    ],
+    "wave": 4,
+    "files": [
+      "ui/TxDetail.tsx"
+    ]
+  },
+  {
+    "id": 14,
+    "title": "address page UI",
+    "type": "feature",
+    "deps": [
+      10
+    ],
+    "wave": 4,
+    "files": [
+      "ui/Address.tsx"
+    ]
+  },
+  {
+    "id": 15,
+    "title": "global search bar",
+    "type": "improvement",
+    "deps": [
+      11
+    ],
+    "wave": 5,
+    "files": [
+      "ui/SearchBar.tsx"
+    ]
+  },
+  {
+    "id": 16,
+    "title": "end-to-end explorer test",
+    "type": "qa",
+    "deps": [
+      12,
+      13,
+      14,
+      15
+    ],
+    "wave": 6,
+    "files": [
+      "tests/e2e/explorer.spec.ts"
+    ]
+  }
+]

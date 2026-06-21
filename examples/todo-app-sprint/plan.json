@@ -1,0 +1,119 @@
+[
+  {
+    "id": 1,
+    "title": "todos table schema",
+    "type": "feature",
+    "deps": [],
+    "wave": 1,
+    "files": [
+      "db/schema/todos.ts"
+    ]
+  },
+  {
+    "id": 2,
+    "title": "users table schema",
+    "type": "feature",
+    "deps": [],
+    "wave": 1,
+    "files": [
+      "db/schema/users.ts"
+    ]
+  },
+  {
+    "id": 3,
+    "title": "auth API (signup/login)",
+    "type": "feature",
+    "deps": [
+      2
+    ],
+    "wave": 2,
+    "files": [
+      "api/auth/routes.ts"
+    ]
+  },
+  {
+    "id": 4,
+    "title": "todos REST API",
+    "type": "feature",
+    "deps": [
+      1
+    ],
+    "wave": 2,
+    "files": [
+      "api/todos/handlers.ts"
+    ]
+  },
+  {
+    "id": 5,
+    "title": "auth middleware",
+    "type": "feature",
+    "deps": [
+      3
+    ],
+    "wave": 3,
+    "files": [
+      "api/middleware/auth.ts"
+    ]
+  },
+  {
+    "id": 6,
+    "title": "todo list UI",
+    "type": "feature",
+    "deps": [
+      4
+    ],
+    "wave": 3,
+    "files": [
+      "ui/components/TodoList.tsx"
+    ]
+  },
+  {
+    "id": 7,
+    "title": "todo item component",
+    "type": "feature",
+    "deps": [
+      4
+    ],
+    "wave": 3,
+    "files": [
+      "ui/components/TodoItem.tsx"
+    ]
+  },
+  {
+    "id": 8,
+    "title": "login page",
+    "type": "feature",
+    "deps": [
+      3
+    ],
+    "wave": 3,
+    "files": [
+      "ui/pages/Login.tsx"
+    ]
+  },
+  {
+    "id": 9,
+    "title": "guard todos API with auth",
+    "type": "improvement",
+    "deps": [
+      5
+    ],
+    "wave": 4,
+    "files": [
+      "api/todos/handlers.ts"
+    ]
+  },
+  {
+    "id": 10,
+    "title": "end-to-end todo flow test",
+    "type": "qa",
+    "deps": [
+      6,
+      8
+    ],
+    "wave": 4,
+    "files": [
+      "tests/e2e/todo.spec.ts"
+    ]
+  }
+]

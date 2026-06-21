@@ -1,0 +1,28 @@
+flowchart LR
+  subgraph W1["Wave 1"]
+    n1["#1 todos table schema"]
+    n2["#2 users table schema"]
+  end
+  subgraph W2["Wave 2"]
+    n3["#3 auth API (signup/login)"]
+    n4["#4 todos REST API"]
+  end
+  subgraph W3["Wave 3"]
+    n5["#5 auth middleware"]
+    n6["#6 todo list UI"]
+    n7["#7 todo item component"]
+    n8["#8 login page"]
+  end
+  subgraph W4["Wave 4"]
+    n9["#9 guard todos API with auth"]
+    n10["#10 end-to-end todo flow test"]
+  end
+  n2 --> n3
+  n1 --> n4
+  n3 --> n5
+  n4 --> n6
+  n4 --> n7
+  n3 --> n8
+  n5 --> n9
+  n6 --> n10
+  n8 --> n10

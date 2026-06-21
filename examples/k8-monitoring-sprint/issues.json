@@ -1,0 +1,15 @@
+[
+  { "id": 1,  "title": "k8s API client + auth",        "type": "feature",     "deps": [],        "files": ["backend/k8s/client.ts"] },
+  { "id": 2,  "title": "pod metrics collector",         "type": "feature",     "deps": [1],       "files": ["backend/collector/pods.ts"] },
+  { "id": 3,  "title": "time-series metrics store",     "type": "feature",     "deps": [],        "files": ["backend/store/timeseries.ts"] },
+  { "id": 4,  "title": "crashloop / restart alerts",    "type": "feature",     "deps": [2],       "files": ["backend/alerts/rules.ts"] },
+  { "id": 5,  "title": "pods REST API",                 "type": "feature",     "deps": [1, 2],    "files": ["backend/api/pods.ts"] },
+  { "id": 6,  "title": "metrics REST API",              "type": "feature",     "deps": [3],       "files": ["backend/api/metrics.ts"] },
+  { "id": 7,  "title": "live pod status websocket",     "type": "feature",     "deps": [2],       "files": ["backend/api/stream.ts"] },
+  { "id": 8,  "title": "dashboard shell + routing",     "type": "feature",     "deps": [],        "files": ["ui/Dashboard.tsx"] },
+  { "id": 9,  "title": "pod list table",                "type": "feature",     "deps": [5, 8],    "files": ["ui/PodTable.tsx"] },
+  { "id": 10, "title": "pod detail drawer",             "type": "feature",     "deps": [5, 6],    "files": ["ui/PodDetail.tsx"] },
+  { "id": 11, "title": "cpu / memory charts",           "type": "feature",     "deps": [6],       "files": ["ui/Charts.tsx"] },
+  { "id": 12, "title": "live status indicators",        "type": "improvement", "deps": [7, 8],    "files": ["ui/LiveStatus.tsx"] },
+  { "id": 13, "title": "end-to-end dashboard test",     "type": "qa",          "deps": [9, 10, 12], "files": ["tests/e2e/dashboard.spec.ts"] }
+]

@@ -1,0 +1,40 @@
+flowchart LR
+  subgraph W1["Wave 1"]
+    n1["#1 k8s API client + auth"]
+    n3["#3 time-series metrics store"]
+    n8["#8 dashboard shell + routing"]
+  end
+  subgraph W2["Wave 2"]
+    n2["#2 pod metrics collector"]
+    n6["#6 metrics REST API"]
+  end
+  subgraph W3["Wave 3"]
+    n4["#4 crashloop / restart alerts"]
+    n5["#5 pods REST API"]
+    n7["#7 live pod status websocket"]
+    n11["#11 cpu / memory charts"]
+  end
+  subgraph W4["Wave 4"]
+    n9["#9 pod list table"]
+    n10["#10 pod detail drawer"]
+    n12["#12 live status indicators"]
+  end
+  subgraph W5["Wave 5"]
+    n13["#13 end-to-end dashboard test"]
+  end
+  n1 --> n2
+  n2 --> n4
+  n1 --> n5
+  n2 --> n5
+  n3 --> n6
+  n2 --> n7
+  n5 --> n9
+  n8 --> n9
+  n5 --> n10
+  n6 --> n10
+  n6 --> n11
+  n7 --> n12
+  n8 --> n12
+  n9 --> n13
+  n10 --> n13
+  n12 --> n13

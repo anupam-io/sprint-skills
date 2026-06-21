@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C145 — Ticket Dependency DAG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0f14;
+    --panel: #11161d;
+    --card: #141b24;
+    --card-edge: #232d3a;
+    --ink: #e8edf2;
+    --ink-2: #97a3b2;
+    --ink-3: #5c6878;
+    --accent: #2dd4bf;
+    --p0: #f0564f;
+    --p1: #e8a13c;
+    --p2: #5b9cf5;
+    --landed: #64748b;
+    --ext: #f0564f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--bg); }
+  body {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    color: var(--ink);
+    background:
+      radial-gradient(1200px 600px at 70% -10%, rgba(45,212,191,0.07), transparent 60%),
+      radial-gradient(900px 500px at 0% 100%, rgba(91,156,245,0.05), transparent 60%),
+      var(--bg);
+    min-height: 100vh;
+  }
+  /* dotted blueprint grid */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: radial-gradient(rgba(151,163,178,0.10) 1px, transparent 1px);
+    background-size: 26px 26px;
+    pointer-events: none;
+  }
+
+  header { padding: 44px 48px 8px; position: relative; }
+  .kicker {
+    font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 10px;
+  }
+  h1 {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400; font-style: italic;
+    font-size: 52px; line-height: 1.02; letter-spacing: 0.01em;
+  }
+  h1 em { font-style: normal; color: var(--accent); }
+  .sub { margin-top: 10px; font-size: 12px; color: var(--ink-2); }
+  .sub b { color: var(--ink); font-weight: 600; }
+
+  .statline {
+    display: flex; gap: 28px; flex-wrap: wrap;
+    margin: 22px 48px 0; padding: 14px 0;
+    border-top: 1px solid var(--card-edge);
+    border-bottom: 1px solid var(--card-edge);
+    font-size: 11px; color: var(--ink-2);
+  }
+  .statline span b { color: var(--ink); font-size: 14px; margin-right: 6px; }
+  .statline .crit b { color: var(--p0); }
+
+  .legend {
+    display: flex; gap: 22px; flex-wrap: wrap; align-items: center;
+    margin: 14px 48px 6px; font-size: 10.5px; color: var(--ink-2);
+  }
+  .legend .li { display: flex; align-items: center; gap: 7px; }
+  .lk { width: 26px; height: 0; border-top: 2px solid var(--accent); }
+  .lk.dash { border-top-style: dashed; border-top-color: var(--ink-3); }
+  .lsw { width: 10px; height: 10px; border-radius: 3px; }
+  .hint { margin-left: auto; color: var(--ink-3); font-style: italic; }
+
+  /* ---------- person filter ---------- */
+  .filterbar {
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+    margin: 16px 48px 4px; font-size: 11px;
+  }
+  .filterbar .flabel {
+    font-size: 10px; letter-spacing: 0.28em; text-transform: uppercase;
+    color: var(--ink-3); margin-right: 6px;
+  }
+  .fchip {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: inherit; font-size: 11px; color: var(--ink-2);
+    background: var(--card); border: 1px solid var(--card-edge);
+    border-radius: 16px; padding: 4px 12px;
+    cursor: pointer;
+    transition: color .15s ease, border-color .15s ease, background .15s ease;
+  }
+  .fchip .dot { width: 7px; height: 7px; }
+  .fchip .fcount {
+    font-size: 9px; font-weight: 600; color: var(--ink-3);
+    background: rgba(151,163,178,0.12);
+    border-radius: 8px; padding: 1px 6px;
+  }
+  .fchip.active .fcount { color: var(--ink); }
+  .fchip:hover { color: var(--ink); border-color: var(--ink-3); }
+  .fchip.active {
+    color: var(--ink);
+    border-color: var(--fc, var(--accent));
+    background: color-mix(in srgb, var(--fc, var(--accent)) 12%, var(--card));
+  }
+  .node.hidden { display: none; }
+  .node.ctx { opacity: 0.28; }
+  .node.ctx.lit { opacity: 0.75; }
+  #wires path.hidden, #wires text.hidden { display: none; }
+  .band-label.hidden { display: none; }
+  .prow.hidden { display: none; }
+
+  /* ---------- wave column headers ---------- */
+  .col-head {
+    position: absolute; top: 0;
+    width: 272px;
+    font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--ink-2);
+    border-top: 2px solid var(--card-edge);
+    padding-top: 7px;
+  }
+  .col-head b { color: var(--accent); font-weight: 600; margin-right: 8px; }
+  .col-head.done { color: var(--ink-3); }
+  .col-head.done b { color: var(--ink-3); }
+
+  /* ---------- DAG canvas ---------- */
+  .scroller { overflow-x: auto; padding: 8px 0 12px; }
+  #canvas {
+    position: relative;
+    width: 1380px; height: 1780px;
+    margin: 0 auto;
+  }
+  #wires { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  #wires path { transition: opacity .18s ease, stroke .18s ease; }
+  #wires path.dim { opacity: 0.06; }
+  #wires text { transition: opacity .18s ease; }
+  #wires text.dim { opacity: 0.05; }
+
+  .band-label {
+    position: absolute;
+    font-size: 10px; letter-spacing: 0.28em; text-transform: uppercase;
+    color: var(--ink-3);
+    transition: opacity .18s ease;
+  }
+  .band-label::after {
+    content: ''; display: block; width: 64px; height: 1px;
+    background: var(--card-edge); margin-top: 6px;
+  }
+
+  .node {
+    position: absolute;
+    width: 272px; min-height: 78px;
+    background: var(--card);
+    border: 1px solid var(--card-edge);
+    border-left: 3px solid var(--pc, var(--ink-3));
+    border-radius: 8px;
+    padding: 9px 12px 10px;
+    cursor: default;
+    transition: opacity .18s ease, transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  }
+  .node:hover { transform: translateY(-1px); }
+  .node.dim { opacity: 0.13; }
+  .node.lit {
+    border-color: color-mix(in srgb, var(--pc) 55%, var(--card-edge));
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--pc) 30%, transparent),
+                0 8px 28px -10px color-mix(in srgb, var(--pc) 45%, transparent);
+  }
+  .node.pinned { outline: 1px dashed var(--accent); outline-offset: 3px; }
+
+  .nrow { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
+  .pri {
+    font-size: 9px; font-weight: 600; letter-spacing: 0.08em;
+    padding: 1px 7px; border-radius: 9px;
+  }
+  .pri-P0 { background: rgba(240,86,79,0.16); color: var(--p0); }
+  .pri-P1 { background: rgba(232,161,60,0.14); color: var(--p1); }
+  .pri-P2 { background: rgba(91,156,245,0.14); color: var(--p2); }
+  .pri-C144 { background: rgba(100,116,139,0.18); color: #94a3b8; }
+  .pri-EXT { background: rgba(240,86,79,0.12); color: var(--ext); border: 1px dashed rgba(240,86,79,0.4); }
+  .pri-SET { background: rgba(45,212,191,0.12); color: var(--accent); }
+  .nid { font-size: 9.5px; color: var(--ink-3); margin-left: auto; }
+  .ntitle { font-size: 12px; font-weight: 600; line-height: 1.3; color: var(--ink); }
+  .nmeta { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 10px; color: var(--ink-2); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--pc); flex-shrink: 0; }
+  .node.ghost { background: #0e1318; border-style: dashed; border-left-style: solid; }
+  .node.ghost .ntitle { color: var(--ink-2); font-weight: 500; }
+
+  /* ---------- standalone tickets ---------- */
+  section.rest { padding: 26px 48px 60px; max-width: 1380px; margin: 0 auto; }
+  section.rest h2 {
+    font-family: 'Instrument Serif', serif; font-style: italic; font-weight: 400;
+    font-size: 28px; margin-bottom: 4px;
+  }
+  section.rest .note { font-size: 11px; color: var(--ink-3); margin-bottom: 18px; }
+  .prow { display: flex; gap: 14px; align-items: baseline; padding: 9px 0; border-bottom: 1px solid #161d27; }
+  .pname { width: 90px; flex-shrink: 0; font-size: 11.5px; font-weight: 600; }
+  .pname .dot { display: inline-block; margin-right: 7px; position: relative; top: 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font-size: 10px; color: var(--ink-2);
+    background: var(--card); border: 1px solid var(--card-edge);
+    border-radius: 6px; padding: 3px 8px;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .chip .pri { padding: 0 5px; font-size: 8.5px; }
+  .chip i { font-style: normal; color: var(--ink-3); font-size: 9px; }
+
+  footer {
+    text-align: center; font-size: 10px; color: var(--ink-3);
+    padding: 0 0 36px; letter-spacing: 0.08em;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="kicker">Range Security &nbsp;//&nbsp; Sprint Planning</div>
+  <h1>Cycle 145 <em>dependency graph</em></h1>
+  <div class="sub">June 15 → 28, 2026 &nbsp;·&nbsp; derived from <b>sprint-plan-c145</b> &nbsp;·&nbsp; columns are <b>waves</b>: wave 1 is startable today, each next wave waits on the one before</div>
+</header>
+
+<div class="statline">
+  <span><b>52</b>issues</span>
+  <span><b>9</b>engineers</span>
+  <span><b>8</b>explicit dependencies</span>
+  <span><b>7</b>implied / sequenced links</span>
+  <span class="crit"><b>1</b>P0→P0 critical chain (The Matrix: Denzel → Keanu)</span>
+</div>
+
+<div class="legend">
+  <span class="li"><span class="lk"></span> explicit dependency</span>
+  <span class="li"><span class="lk dash"></span> implied · sequencing · support</span>
+  <span class="li"><span class="lsw" style="background:rgba(100,116,139,.4)"></span> landed in C144 (done)</span>
+  <span class="li"><span class="lsw" style="border:1px dashed var(--ext); background:rgba(240,86,79,.1)"></span> external blocker (pending)</span>
+  <span class="li">card colour = owner &nbsp;·&nbsp; pill = priority</span>
+  <span class="hint">hover a ticket to trace its chain · click to pin</span>
+</div>
+
+<div class="filterbar" id="filterbar">
+  <span class="flabel">Filter</span>
+</div>
+
+<div class="scroller">
+  <div id="canvas">
+    <svg id="wires"></svg>
+  </div>
+</div>
+
+<section class="rest">
+  <h2>Off the critical path</h2>
+  <div class="note">Independent tickets — no inter-ticket dependencies declared in the plan. Grouped by owner.</div>
+  <div id="rest"></div>
+</section>
+
+<footer>GENERATED FROM SPRINT-PLAN-C145 · JUNE 2026</footer>
+
+<script>
+const PEOPLE = {
+  Keanu:   '#f472b6',
+  Pedro:   '#a78bfa',
+  Denzel:  '#38bdf8',
+  Zendaya: '#34d399',
+  Brad:    '#fb923c',
+  Rihanna: '#facc15',
+  Leo:     '#2dd4bf',
+  'Timothée': '#e879f9',
+  Oprah:   '#c4b5fd',
+  C144:    '#64748b',
+  Banksy:  '#f0564f',
+  Team:    '#94a3b8',
+};
+
+// columns
+const CX = { 0: 30, 1: 366, 2: 712, 3: 1058 };
+
+// id, col, y, priority, title, ticket-id/status, owner, ghost(landed/external)
+const NODES = [
+  // — the matrix trilogy
+  ['A1', 1,  46, 'P0',  'The Matrix — Monitoring Pipeline', 'NEW', 'Denzel'],
+  ['A2', 2,  46, 'P0',  'The Matrix Reloaded — Alert Rule', 'NEW · Warner Bros', 'Keanu'],
+  ['L1', 0, 148, 'C144','Inception — Proximity Graph', 'landed', 'Denzel', true],
+  ['A3', 1, 148, 'P1',  'The Matrix Resurrections — Build', 'MOV-4091 · Warner Bros', 'Leo'],
+  // — blockbusters
+  ['AGG',1, 282, 'SET', 'New Alert Rules — Warner Bros + Pixar', '10 tickets', 'Team', true],
+  ['I1', 2, 282, 'P2',  'Minority Report — Configuration UI', 'NEW', 'Rihanna'],
+  ['H1', 1, 386, 'P1',  'Mission Impossible — Destination Integration', 'NEW · Pixar', 'Pedro'],
+  ['H2', 2, 386, 'P1',  'Mission Impossible 2 — Action Alert', 'NEW · Pixar', 'Pedro'],
+  // — the godfather saga
+  ['B1', 1, 522, 'P1',  'The Godfather — MVP Backend', 'NEW', 'Zendaya'],
+  ['B2', 2, 498, 'P1',  'The Godfather Part II — Path to Power', 'MOV-3240', 'Rihanna'],
+  ['B3', 3, 552, 'P1',  'The Godfather Part III — Save & Share', 'NEW', 'Rihanna'],
+  // — blade runner
+  ['L5', 0, 688, 'EXT', 'Blade Runner — Page Design', 'pending', 'Banksy', true],
+  ['C1', 1, 788, 'P1',  'Blade Runner 2049 — Backend API', 'NEW · prod by EOM', 'Zendaya'],
+  ['C2', 2, 736, 'P2',  'Blade Runner 2049 — Frontend', 'NEW', 'Rihanna'],
+  // — C144 → UI wiring
+  ['L2', 0, 924, 'C144','John Wick — Scoped Alerting', 'landed', 'Keanu', true],
+  ['D1', 1, 924, 'P1',  'John Wick Chapter 2 — Alerting UI', 'MOV-3520', 'Rihanna'],
+  ['L3', 0, 1026,'C144','Heat — Crew Backend', 'landed', 'Pedro', true],
+  ['D2', 1, 1026,'P1',  'The Italian Job — Enrichment UI', 'MOV-3836', 'Rihanna'],
+  ['L4', 0, 1128,'C144','Ad Astra — Usage + Credit Middleware', 'landed', 'Brad', true],
+  ['E1', 1, 1128,'P1',  'Se7en — Email Notifications', 'NEW', 'Brad'],
+  // — Timothée onboarding arc
+  ['F1', 1, 1262,'P1',  'Dune Part One — Trace', 'MOV-4092 · days 1–3', 'Timothée'],
+  ['F2', 2, 1262,'P1',  'Dune Part Two — Propose', 'MOV-4093 · days 3–6', 'Timothée'],
+  ['F3', 3, 1330,'P1',  'Dune Messiah — Build & Ship', 'MOV-4094 · days 6–14', 'Timothée'],
+  ['M1', 1, 1364,'SET', 'Man on Fire — Mentoring', 'support', 'Denzel', true],
+  // — star wars saga
+  ['G1', 1, 1494,'P1',  'A New Hope — Attribute API', 'MOV-4008', 'Rihanna'],
+  ['G2', 2, 1424,'P1',  'The Empire Strikes Back — CRUD App', 'MOV-4009', 'Rihanna'],
+  ['G3', 2, 1534,'P1',  'Return of the Jedi — Auto-update Logic', 'MOV-4010', 'Rihanna'],
+  ['G4', 2, 1644,'P1',  'The Force Awakens — Iteration 1', 'MOV-4011', 'Rihanna'],
+];
+
+// from, to, kind (hard | soft), optional label
+const EDGES = [
+  ['A1','A2','hard'],
+  ['L1','A3','hard'],
+  ['AGG','I1','soft','rule types'],
+  ['H1','H2','soft','severe → escalation'],
+  ['B1','B2','hard'],
+  ['B1','B3','hard'],
+  ['B2','B3','soft','feeds'],
+  ['C1','C2','hard'],
+  ['L5','C2','soft','awaiting design'],
+  ['L2','D1','hard'],
+  ['L3','D2','hard'],
+  ['L4','E1','hard'],
+  ['F1','F2','soft','sequenced'],
+  ['F2','F3','soft','sequenced'],
+  ['M1','F3','soft','supports'],
+  ['G1','G2','soft'],
+  ['G1','G3','soft'],
+  ['G1','G4','soft','related'],
+];
+
+const BANDS = [
+  [46,  'The Matrix Trilogy'],
+  [282, 'Blockbusters'],
+  [498, 'The Godfather Saga'],
+  [924, 'C144 → UI Wiring'],
+  [1262,'Timothée — Onboarding Arc'],
+  [1424,'Star Wars Saga'],
+];
+
+const canvas = document.getElementById('canvas');
+const svg = document.getElementById('wires');
+const elById = {};
+
+// wave column headers
+const COL_HEADS = [
+  [0, 'Done · External', 'done'],
+  [1, 'Wave 1 — start now', ''],
+  [2, 'Wave 2 — one hop out', ''],
+  [3, 'Wave 3 — two hops out', ''],
+];
+for (const [col, label, cls] of COL_HEADS) {
+  const h = document.createElement('div');
+  h.className = 'col-head ' + cls;
+  h.style.left = CX[col] + 'px';
+  h.innerHTML = `<b>${col === 0 ? '·' : 'W' + col}</b>${label}`;
+  canvas.appendChild(h);
+}
+
+// band labels (placed in column 0 when it is empty, else above)
+for (const [y, name] of BANDS) {
+  const b = document.createElement('div');
+  b.className = 'band-label';
+  b.textContent = name;
+  b.style.left = CX[0] + 'px';
+  b.style.top = (y + 8) + 'px';
+  canvas.appendChild(b);
+}
+
+for (const [id, col, y, pri, title, sub, person, ghost] of NODES) {
+  const n = document.createElement('div');
+  n.className = 'node' + (ghost ? ' ghost' : '');
+  n.id = 'n-' + id;
+  n.style.left = CX[col] + 'px';
+  n.style.top = y + 'px';
+  n.style.setProperty('--pc', PEOPLE[person]);
+  n.innerHTML = `
+    <div class="nrow"><span class="pri pri-${pri}">${pri === 'SET' ? 'GROUP' : pri}</span><span class="nid">${sub}</span></div>
+    <div class="ntitle">${title}</div>
+    <div class="nmeta"><span class="dot"></span>${person}</div>`;
+  canvas.appendChild(n);
+  elById[id] = n;
+}
+
+// ---- wires ----
+svg.innerHTML = `<defs>
+  <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+    <path d="M0,1 L9,5 L0,9 Z" fill="rgba(160,176,194,0.85)"/>
+  </marker>
+</defs>`;
+
+const NS = 'http://www.w3.org/2000/svg';
+const edgeEls = [];
+for (const [from, to, kind, label] of EDGES) {
+  const a = elById[from], b = elById[to];
+  const x1 = a.offsetLeft + a.offsetWidth, y1 = a.offsetTop + a.offsetHeight / 2;
+  const x2 = b.offsetLeft,                 y2 = b.offsetTop + b.offsetHeight / 2;
+  const dx = Math.max(54, (x2 - x1) * 0.46);
+  const p = document.createElementNS(NS, 'path');
+  p.setAttribute('d', `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`);
+  p.setAttribute('fill', 'none');
+  p.setAttribute('stroke', kind === 'hard' ? 'rgba(45,212,191,0.75)' : 'rgba(151,163,178,0.5)');
+  p.setAttribute('stroke-width', kind === 'hard' ? 1.8 : 1.4);
+  if (kind === 'soft') p.setAttribute('stroke-dasharray', '5 4');
+  p.setAttribute('marker-end', 'url(#arr)');
+  svg.appendChild(p);
+  let t = null;
+  if (label) {
+    t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', (x1 + x2) / 2);
+    t.setAttribute('y', (y1 + y2) / 2 - 6);
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('font-size', '9');
+    t.setAttribute('font-family', 'IBM Plex Mono, monospace');
+    t.setAttribute('fill', 'rgba(151,163,178,0.75)');
+    t.textContent = label;
+    svg.appendChild(t);
+  }
+  edgeEls.push({ from, to, p, t });
+}
+
+// ---- chain highlighting ----
+const up = {}, down = {};
+for (const { from, to } of edgeEls) {
+  (down[from] = down[from] || []).push(to);
+  (up[to] = up[to] || []).push(from);
+}
+function reach(start, dir) {
+  const seen = new Set([start]), q = [start];
+  while (q.length) {
+    const cur = q.pop();
+    for (const nxt of (dir[cur] || [])) if (!seen.has(nxt)) { seen.add(nxt); q.push(nxt); }
+  }
+  return seen;
+}
+let pinned = null;
+function highlight(id) {
+  const lit = new Set([...reach(id, up), ...reach(id, down)]);
+  for (const [nid, el] of Object.entries(elById)) {
+    el.classList.toggle('lit', lit.has(nid));
+    el.classList.toggle('dim', !lit.has(nid));
+  }
+  for (const e of edgeEls) {
+    const on = lit.has(e.from) && lit.has(e.to);
+    e.p.classList.toggle('dim', !on);
+    if (e.t) e.t.classList.toggle('dim', !on);
+  }
+  document.querySelectorAll('.band-label').forEach(b => b.style.opacity = 0.35);
+}
+function clear() {
+  for (const el of Object.values(elById)) el.classList.remove('lit', 'dim');
+  for (const e of edgeEls) { e.p.classList.remove('dim'); if (e.t) e.t.classList.remove('dim'); }
+  document.querySelectorAll('.band-label').forEach(b => b.style.opacity = 1);
+}
+for (const [id, el] of Object.entries(elById)) {
+  el.addEventListener('mouseenter', () => { if (!pinned) highlight(id); });
+  el.addEventListener('mouseleave', () => { if (!pinned) clear(); });
+  el.addEventListener('click', () => {
+    if (pinned === id) {
+      pinned = null; el.classList.remove('pinned'); clear();
+    } else {
+      if (pinned) elById[pinned].classList.remove('pinned');
+      pinned = id; el.classList.add('pinned'); highlight(id);
+    }
+  });
+}
+
+// ---- standalone tickets ----
+const REST = [
+  ['Keanu', [['John Wick — Alert Rule','NEW','P0'],['Speed — Breach Alert Rule','NEW','P1'],['Constantine — Interaction Alert','NEW','P1'],['Point Break — Drop Alert','NEW','P1'],['The Lake House — Auto-Attribution Deploy','NEW','P1'],['A Scanner Darkly — Integration','MOV-4033','P2']]],
+  ['Pedro', [['Gladiator II — Post-Migration Hardening','NEW','P0'],['Oceans Eleven — Rule Consolidation','NEW','P1'],['Oceans Twelve — Signer Tx Alert','NEW','P1'],['Oceans Thirteen — Signer Tx Alert','NEW','P1'],['Now You See Me — Solo Tx Alert','NEW','P1'],['In Time — Timezone Monitoring','NEW','P1'],['You\'ve Got Mail — Alert Destination','NEW','P1'],['Finding Nemo — Hash Search','MOV-3654','P2']]],
+  ['Denzel', [['Training Day — Behaviour Filter','NEW','P1'],['The Equalizer — Chain Support','MOV-4028','P1'],['Interstellar — Pipeline Monitoring','MOV-3148','P2']]],
+  ['Zendaya', [['Spider-Man Homecoming — Balances API','MOV-3944','P0'],['Spider-Man Far From Home — Plan Limits','NEW','P1'],['Spider-Man No Way Home — Integration','MOV-3936','P2']]],
+  ['Brad', [['Moneyball — Integration','MOV-3733','P0'],['World War Z — Security Findings','MOV-4040','P0'],['Fight Club — Backend API','MOV-3751','P2']]],
+  ['Rihanna', [['Oceans 8 — Close-out','MOV-3532','P0'],['Battleship — API Wiring','NEW','P1'],['Valerian — Details Fix','MOV-3732','P2']]],
+  ['Leo', [['Shutter Island — Security Fix','MOV-4090','P0'],['The Departed — Services Takeover','MOV-4089','P1'],['The Revenant — Health Monitor','MOV-4095','P1']]],
+  ['Oprah', [['A Wrinkle in Time — Spec','NEW','P1'],['The Color Purple — Spec','NEW','P1']]],
+];
+const restEl = document.getElementById('rest');
+const restRows = {};
+for (const [person, items] of REST) {
+  const row = document.createElement('div');
+  row.className = 'prow';
+  row.innerHTML = `<div class="pname"><span class="dot" style="--pc:${PEOPLE[person]}; background:${PEOPLE[person]}"></span>${person}</div>
+    <div class="chips">${items.map(([t, id, pri]) =>
+      `<span class="chip"><span class="pri pri-${pri}">${pri}</span>${t}<i>${id}</i></span>`).join('')}</div>`;
+  restEl.appendChild(row);
+  restRows[person] = row;
+}
+
+// ---- person filter ----
+const ownerOf = {};
+for (const [id, , , , , , person] of NODES) ownerOf[id] = person;
+// the aggregate rules node stands in for both rule authors
+const AGG_MEMBERS = { AGG: ['Keanu', 'Pedro'] };
+function ownedBy(id, person) {
+  return ownerOf[id] === person || (AGG_MEMBERS[id] || []).includes(person);
+}
+
+const FILTER_PEOPLE = ['Keanu', 'Pedro', 'Denzel', 'Zendaya', 'Brad', 'Rihanna', 'Leo', 'Timothée', 'Oprah'];
+
+// ticket count per person = their DAG tickets (ghosts excluded) + independent tickets below
+const COUNTS = {};
+for (const [, , , , , , person, ghost] of NODES)
+  if (!ghost) COUNTS[person] = (COUNTS[person] || 0) + 1;
+for (const [person, items] of REST)
+  COUNTS[person] = (COUNTS[person] || 0) + items.length;
+const TOTAL = Object.values(COUNTS).reduce((a, b) => a + b, 0);
+
+const bar = document.getElementById('filterbar');
+const fchips = {};
+function makeChip(label, person) {
+  const c = document.createElement('button');
+  c.className = 'fchip';
+  c.style.setProperty('--fc', person ? PEOPLE[person] : 'var(--accent)');
+  c.innerHTML = person
+    ? `<span class="dot" style="background:${PEOPLE[person]}"></span>${person}<span class="fcount">${COUNTS[person] || 0}</span>`
+    : `Everyone<span class="fcount">${TOTAL}</span>`;
+  c.addEventListener('click', () => {
+    if (!person) selected.clear();
+    else selected.has(person) ? selected.delete(person) : selected.add(person);
+    applyFilter();
+  });
+  bar.appendChild(c);
+  fchips[person || '*'] = c;
+}
+makeChip('Everyone', null);
+for (const p of FILTER_PEOPLE) makeChip(p, p);
+
+const selected = new Set();
+function applyFilter() {
+  if (pinned) { elById[pinned].classList.remove('pinned'); pinned = null; }
+  clear();
+  const all = selected.size === 0;
+  for (const [key, chip] of Object.entries(fchips))
+    chip.classList.toggle('active', key === '*' ? all : selected.has(key));
+
+  const visible = new Set(), owned = new Set();
+  if (all) {
+    for (const id of Object.keys(elById)) { visible.add(id); owned.add(id); }
+  } else {
+    for (const id of Object.keys(elById))
+      if ([...selected].some(p => ownedBy(id, p))) { owned.add(id); visible.add(id); }
+    for (const { from, to } of edgeEls) {
+      if (owned.has(from)) visible.add(to);
+      if (owned.has(to)) visible.add(from);
+    }
+  }
+  for (const [id, el] of Object.entries(elById)) {
+    el.classList.toggle('hidden', !visible.has(id));
+    el.classList.toggle('ctx', visible.has(id) && !owned.has(id));
+  }
+  for (const e of edgeEls) {
+    const on = visible.has(e.from) && visible.has(e.to) && (owned.has(e.from) || owned.has(e.to));
+    e.p.classList.toggle('hidden', !on);
+    if (e.t) e.t.classList.toggle('hidden', !on);
+  }
+  // band labels: keep only bands that still have a visible node
+  const bandYs = BANDS.map(([y]) => y);
+  const labels = document.querySelectorAll('.band-label');
+  labels.forEach((lab, i) => {
+    const lo = bandYs[i], hi = i + 1 < bandYs.length ? bandYs[i + 1] : Infinity;
+    const any = NODES.some(([id, , y]) => visible.has(id) && y >= lo && y < hi);
+    lab.classList.toggle('hidden', !any);
+  });
+  // standalone list
+  for (const [p, row] of Object.entries(restRows))
+    row.classList.toggle('hidden', !all && !selected.has(p));
+}
+applyFilter();
+</script>
+
+</body>
+</html>

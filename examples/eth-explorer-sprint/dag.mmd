@@ -1,0 +1,49 @@
+flowchart LR
+  subgraph W1["Wave 1"]
+    n1["#1 eth JSON-RPC client"]
+    n2["#2 blocks table schema"]
+    n3["#3 txs table schema"]
+    n4["#4 accounts table schema"]
+  end
+  subgraph W2["Wave 2"]
+    n5["#5 block indexer"]
+    n6["#6 transaction indexer"]
+    n7["#7 account state indexer"]
+  end
+  subgraph W3["Wave 3"]
+    n8["#8 blocks API"]
+    n9["#9 transactions API"]
+    n10["#10 address API"]
+  end
+  subgraph W4["Wave 4"]
+    n11["#11 unified search API"]
+    n12["#12 block list + detail UI"]
+    n13["#13 transaction detail UI"]
+    n14["#14 address page UI"]
+  end
+  subgraph W5["Wave 5"]
+    n15["#15 global search bar"]
+  end
+  subgraph W6["Wave 6"]
+    n16["#16 end-to-end explorer test"]
+  end
+  n1 --> n5
+  n2 --> n5
+  n1 --> n6
+  n3 --> n6
+  n1 --> n7
+  n4 --> n7
+  n5 --> n8
+  n6 --> n9
+  n7 --> n10
+  n8 --> n11
+  n9 --> n11
+  n10 --> n11
+  n8 --> n12
+  n9 --> n13
+  n10 --> n14
+  n11 --> n15
+  n12 --> n16
+  n13 --> n16
+  n14 --> n16
+  n15 --> n16
